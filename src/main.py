@@ -2,6 +2,7 @@
 import argparse
 import sys
 import time
+import traceback
 
 import polars as pl
 
@@ -189,6 +190,7 @@ def main():
             print(f"  {signal_name}: {len(flags)} flags in {time.time() - t:.1f}s")
         except Exception as e:
             print(f"  ERROR in {signal_name}: {e}")
+            traceback.print_exc()
             signal_tallies[signal_name] = 0
 
     # Enrich and build report

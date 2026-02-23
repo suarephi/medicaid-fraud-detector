@@ -151,7 +151,7 @@ def build_provider_entry(
             "estimated_overpayment": round(overpayment, 2),
             "fca_statute": FCA_STATUTES[sig_id]["statute"],
             "fca_description": FCA_STATUTES[sig_id]["description"],
-            "next_steps": NEXT_STEPS[sig_id][:2],  # At least 2 per rules
+            "next_steps": NEXT_STEPS[sig_id],
         })
 
     return {

@@ -47,6 +47,15 @@ def _extract_year_month(lf: pl.LazyFrame, col: str) -> pl.LazyFrame:
     )
 
 
+def _filter_valid_npi(lf: pl.LazyFrame, npi_alias: str = "_npi") -> pl.LazyFrame:
+    """Filter out null, empty, and all-zero NPIs."""
+    return lf.filter(
+        pl.col(npi_alias).is_not_null()
+        & (pl.col(npi_alias) != "")
+        & (pl.col(npi_alias) != "0000000000")
+    )
+
+
 def signal_1_excluded_billing(
     medicaid_lf: pl.LazyFrame,
     med_cols: dict[str, str],
@@ -81,15 +90,17 @@ def signal_1_excluded_billing(
 
     print(f"  Signal 1: {len(excluded)} excluded providers (no reinstatement) to check")
 
-    # Normalize Medicaid NPI and cast date
+    # Normalize Medicaid NPI, filter invalid, and cast date
     med = medicaid_lf.with_columns(
         normalize_npi(pl.col(npi_col)).alias("_npi")
     )
+    med = _filter_valid_npi(med)
     med = _to_date_col(med, date_col)
 
-    # Join and filter for post-exclusion billing
+    # Join and filter for post-exclusion billing (skip null dates)
     result = (
         med
+        .filter(pl.col(date_col).is_not_null())
         .join(excluded.lazy(), left_on="_npi", right_on="excl_npi")
         .filter(pl.col(date_col) > pl.col("excl_date"))
         .group_by("_npi")
@@ -136,10 +147,11 @@ def signal_2_volume_outlier(
     npi_col = med_cols["npi"]
     payment_col = med_cols["payment"]
 
-    # Aggregate total payment per NPI
+    # Aggregate total payment per NPI, filtering invalid NPIs
     npi_totals = (
         medicaid_lf
         .with_columns(normalize_npi(pl.col(npi_col)).alias("_npi"))
+        .pipe(_filter_valid_npi)
         .group_by("_npi")
         .agg(pl.col(payment_col).sum().alias("total_paid"))
     )
@@ -216,6 +228,7 @@ def signal_3_rapid_escalation(
     med = medicaid_lf.with_columns(
         normalize_npi(pl.col(npi_col)).alias("_npi")
     )
+    med = _filter_valid_npi(med)
     med = _to_date_col(med, date_col)
     med = _extract_year_month(med, date_col)
 
@@ -223,9 +236,7 @@ def signal_3_rapid_escalation(
     monthly = (
         med
         .group_by(["_npi", "year_month"])
-        .agg([
-            pl.col(payment_col).sum().alias("monthly_paid"),
-        ])
+        .agg(pl.col(payment_col).sum().alias("monthly_paid"))
         .sort(["_npi", "year_month"])
     )
 
@@ -237,17 +248,19 @@ def signal_3_rapid_escalation(
         pl.col("Provider Enumeration Date").alias("enum_date_str"),
     ])
 
-    # Join to get enumeration date
-    joined = monthly.join(nppes, on="_npi", how="inner")
-
-    # Parse enumeration date and find first billing month
-    joined = joined.with_columns(
-        pl.col("enum_date_str").cast(pl.Utf8).str.strptime(
-            pl.Date, "%m/%d/%Y", strict=False
-        ).alias("enum_date")
+    # Join to get enumeration date and parse it
+    joined = (
+        monthly
+        .join(nppes, on="_npi", how="inner")
+        .with_columns(
+            pl.col("enum_date_str").cast(pl.Utf8).str.strptime(
+                pl.Date, "%m/%d/%Y", strict=False
+            ).alias("enum_date")
+        )
+        .filter(pl.col("enum_date").is_not_null())
     )
 
-    # Calculate first billing per NPI and filter new providers
+    # First billing month per NPI
     first_billing = (
         joined
         .group_by("_npi")
@@ -257,11 +270,11 @@ def signal_3_rapid_escalation(
         ])
     )
 
-    # Collect to process growth rates
-    monthly_df = joined.collect()
+    # Collect first_billing to filter new providers
     first_df = first_billing.collect()
 
     # Filter to new providers: enumeration within 24 months of first billing
+    from datetime import date as dt_date
     new_providers = set()
     first_map = {}
     enum_map = {}
@@ -270,17 +283,15 @@ def signal_3_rapid_escalation(
         first_map[npi] = row["first_billing_month"]
         if row["enum_date"] is not None:
             enum_map[npi] = row["enum_date"]
-            # Check if first billing is within 24 months of enumeration
             first_ym = row["first_billing_month"]
             try:
-                from datetime import date
                 ym_parts = first_ym.split("-")
-                first_date = date(int(ym_parts[0]), int(ym_parts[1]), 1)
+                first_date = dt_date(int(ym_parts[0]), int(ym_parts[1]), 1)
                 diff_months = (first_date.year - row["enum_date"].year) * 12 + \
                               (first_date.month - row["enum_date"].month)
                 if 0 <= diff_months <= 24:
                     new_providers.add(npi)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, IndexError):
                 pass
 
     print(f"  Signal 3: {len(new_providers)} newly enumerated providers to check")
@@ -288,50 +299,60 @@ def signal_3_rapid_escalation(
     if not new_providers:
         return []
 
-    # Filter monthly data to new providers and calculate growth
-    new_monthly = monthly_df.filter(pl.col("_npi").is_in(list(new_providers)))
+    # Filter to new providers and compute growth using polars shift()
+    new_monthly = joined.filter(
+        pl.col("_npi").is_in(list(new_providers))
+    ).collect().sort(["_npi", "year_month"])
 
-    flags = []
-    for npi in new_providers:
-        npi_data = (
-            new_monthly
-            .filter(pl.col("_npi") == npi)
-            .sort("year_month")
+    # Vectorized MoM growth calculation
+    growth_df = (
+        new_monthly
+        .with_columns([
+            pl.col("monthly_paid").shift(1).over("_npi").alias("prev_paid"),
+        ])
+        .with_columns(
+            pl.when(pl.col("prev_paid") > 0)
+            .then((pl.col("monthly_paid") - pl.col("prev_paid")) / pl.col("prev_paid") * 100)
+            .otherwise(None)
+            .alias("mom_growth")
         )
-        payments = npi_data["monthly_paid"].to_list()
+    )
+
+    # Get peak growth and payments during growth months per NPI
+    flagged = (
+        growth_df
+        .group_by("_npi")
+        .agg([
+            pl.col("mom_growth").max().alias("peak_growth_rate"),
+            # Sum payments in months where growth > 200%
+            pl.col("monthly_paid")
+            .filter(pl.col("mom_growth") > 200)
+            .sum()
+            .alias("payments_during_growth"),
+        ])
+        .filter(pl.col("peak_growth_rate") > 200)
+    )
+
+    # Build 12-month progressions
+    flags = []
+    for row in flagged.iter_rows(named=True):
+        npi = row["_npi"]
+        npi_data = growth_df.filter(pl.col("_npi") == npi).sort("year_month")
         months = npi_data["year_month"].to_list()
+        payments = npi_data["monthly_paid"].to_list()
+        progression = {months[i]: float(payments[i]) for i in range(min(12, len(months)))}
 
-        if len(payments) < 2:
-            continue
-
-        # Calculate MoM growth rates
-        max_growth = 0.0
-        payments_during_growth = 0.0
-        for i in range(1, len(payments)):
-            prev = payments[i - 1]
-            curr = payments[i]
-            if prev > 0:
-                growth = ((curr - prev) / prev) * 100
-                if growth > max_growth:
-                    max_growth = growth
-                if growth > 200:
-                    payments_during_growth += curr
-
-        if max_growth > 200:
-            # Build 12-month progression
-            progression = {months[i]: float(payments[i]) for i in range(min(12, len(months)))}
-
-            flags.append({
-                "npi": npi,
-                "signal_id": 3,
-                "details": {
-                    "enumeration_date": str(enum_map.get(npi, "")),
-                    "first_billing_month": first_map.get(npi, ""),
-                    "twelve_month_progression": progression,
-                    "peak_growth_rate": round(max_growth, 1),
-                    "payments_during_growth": round(payments_during_growth, 2),
-                },
-            })
+        flags.append({
+            "npi": npi,
+            "signal_id": 3,
+            "details": {
+                "enumeration_date": str(enum_map.get(npi, "")),
+                "first_billing_month": first_map.get(npi, ""),
+                "twelve_month_progression": progression,
+                "peak_growth_rate": round(float(row["peak_growth_rate"]), 1),
+                "payments_during_growth": round(float(row["payments_during_growth"]), 2),
+            },
+        })
 
     print(f"  Signal 3: {len(flags)} providers with rapid escalation (>200% MoM)")
     return flags
@@ -359,7 +380,10 @@ def signal_4_workforce_impossibility(
     # Only organizations (Entity Type Code = "2")
     org_npis = (
         nppes_lf
-        .filter(pl.col("Entity Type Code").cast(pl.Utf8) == "2")
+        .filter(
+            pl.col("Entity Type Code").is_not_null()
+            & (pl.col("Entity Type Code").cast(pl.Utf8) == "2")
+        )
         .with_columns(normalize_npi(pl.col("NPI")).alias("_npi"))
         .select("_npi")
     )
@@ -368,6 +392,7 @@ def signal_4_workforce_impossibility(
     med = medicaid_lf.with_columns(
         normalize_npi(pl.col(npi_col)).alias("_npi")
     )
+    med = _filter_valid_npi(med)
     med = _to_date_col(med, date_col)
     med = _extract_year_month(med, date_col)
 
@@ -382,12 +407,15 @@ def signal_4_workforce_impossibility(
         ])
     )
 
-    # Peak month per NPI
+    # Find peak month per NPI using window function (not sort+first which is unreliable)
     peak = (
         monthly
-        .sort(["_npi", "monthly_claims"], descending=[False, True])
+        .with_columns(
+            pl.col("monthly_claims").max().over("_npi").alias("max_claims")
+        )
+        .filter(pl.col("monthly_claims") == pl.col("max_claims"))
         .group_by("_npi")
-        .first()
+        .first()  # Break ties by taking first
         .with_columns(
             (pl.col("monthly_claims").cast(pl.Float64) / HOURS_PER_MONTH)
             .alias("claims_per_hour")
@@ -404,6 +432,7 @@ def signal_4_workforce_impossibility(
             pl.col(payment_col).sum().alias("total_paid"),
             pl.col(claims_col).sum().alias("total_claims"),
         ])
+        .filter(pl.col("total_claims") > 0)  # Avoid division by zero
         .with_columns(
             (pl.col("total_paid") / pl.col("total_claims")).alias("avg_payment_per_claim")
         )
@@ -417,7 +446,8 @@ def signal_4_workforce_impossibility(
     for row in result.iter_rows(named=True):
         reasonable_claims = THRESHOLD * HOURS_PER_MONTH
         excess = max(0, int(row["monthly_claims"]) - reasonable_claims)
-        avg_pmt = float(row.get("avg_payment_per_claim", 0) or 0)
+        avg_pmt = row.get("avg_payment_per_claim")
+        avg_pmt = float(avg_pmt) if avg_pmt is not None else 0.0
 
         flags.append({
             "npi": row["_npi"],
@@ -446,19 +476,20 @@ def signal_5_shared_official(
     npi_col = med_cols["npi"]
     payment_col = med_cols["payment"]
 
-    # Group NPPES by authorized official
+    # Build official_name, handling null first names
     officials = (
         nppes_lf
         .filter(
             pl.col("Authorized Official Last Name").is_not_null()
-            & (pl.col("Authorized Official Last Name") != "")
+            & (pl.col("Authorized Official Last Name").cast(pl.Utf8).str.strip_chars() != "")
         )
         .with_columns([
             normalize_npi(pl.col("NPI")).alias("_npi"),
             (
                 pl.col("Authorized Official Last Name").cast(pl.Utf8).str.to_uppercase()
                 + ", "
-                + pl.col("Authorized Official First Name").cast(pl.Utf8).str.to_uppercase()
+                + pl.col("Authorized Official First Name").cast(pl.Utf8)
+                    .fill_null("").str.to_uppercase()
             ).alias("official_name"),
         ])
         .select(["_npi", "official_name"])
@@ -483,29 +514,37 @@ def signal_5_shared_official(
 
     print(f"  Signal 5: {len(official_counts_df)} officials controlling 5+ NPIs")
 
-    # Get billing totals per NPI
+    # Get billing totals per NPI (single aggregation)
     npi_billing = (
         medicaid_lf
         .with_columns(normalize_npi(pl.col(npi_col)).alias("_npi"))
+        .pipe(_filter_valid_npi)
         .group_by("_npi")
         .agg(pl.col(payment_col).sum().alias("npi_total_paid"))
         .collect()
     )
 
+    # Build a billing lookup dict for O(1) access instead of O(n) filter per NPI
+    billing_map = dict(
+        zip(
+            npi_billing["_npi"].to_list(),
+            npi_billing["npi_total_paid"].to_list(),
+        )
+    )
+
+    # Explode and look up billing via dict (O(n) instead of O(n^2))
     flags = []
     for row in official_counts_df.iter_rows(named=True):
         official = row["official_name"]
         npis = row["npi_list"]
 
-        # Look up billing for each NPI
         npi_totals = {}
         combined = 0.0
         for npi in npis:
-            billing = npi_billing.filter(pl.col("_npi") == npi)
-            if not billing.is_empty():
-                total = float(billing["npi_total_paid"][0])
-                npi_totals[npi] = total
-                combined += total
+            total = billing_map.get(npi, 0.0)
+            if total:
+                npi_totals[npi] = float(total)
+                combined += float(total)
 
         if combined > 1_000_000:
             flags.append({
@@ -531,6 +570,9 @@ def signal_6_geographic_implausibility(
 
     Home health providers with unique beneficiary-to-claims ratio below 0.1
     within a single month with >100 claims.
+
+    Uses max(beneficiaries) across procedure codes as a proxy for unique
+    beneficiaries, since the same patient may appear under multiple codes.
     """
     npi_col = med_cols["npi"]
     date_col = med_cols["date"]
@@ -544,20 +586,26 @@ def signal_6_geographic_implausibility(
     med = medicaid_lf.with_columns(
         normalize_npi(pl.col(npi_col)).alias("_npi")
     )
+    med = _filter_valid_npi(med)
     med = _to_date_col(med, date_col)
     med = _extract_year_month(med, date_col)
 
     # Filter to home health codes and aggregate by NPI + month
+    # Use max() for beneficiaries (proxy for unique count across HCPCS codes)
     monthly = (
         med
         .filter(pl.col(hcpcs_col).cast(pl.Utf8).is_in(hh_codes))
         .group_by(["_npi", "year_month"])
         .agg([
-            pl.col(bene_col).sum().alias("unique_benes"),
+            pl.col(bene_col).max().alias("unique_benes"),
             pl.col(claims_col).sum().alias("total_claims"),
             pl.col(hcpcs_col).first().alias("flagged_code"),
         ])
-        .filter(pl.col("total_claims") > 100)
+        .filter(
+            (pl.col("total_claims") > 100)
+            & (pl.col("unique_benes").is_not_null())
+            & (pl.col("unique_benes") > 0)
+        )
         .with_columns(
             (pl.col("unique_benes").cast(pl.Float64) / pl.col("total_claims"))
             .alias("bene_claims_ratio")
