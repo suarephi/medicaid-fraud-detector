@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "generated_at": "2026-02-23T12:00:00+00:00",
+    "tool_version": "1.0.0",
+    "scan_count": 0,
+    "flag_count": 0
+  },
+  "signal_tallies": {
+    "signal_1": 0,
+    "signal_2": 0,
+    "signal_3": 0,
+    "signal_4": 0,
+    "signal_5": 0,
+    "signal_6": 0
+  },
+  "flagged_providers": []
+}
