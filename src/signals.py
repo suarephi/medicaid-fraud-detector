@@ -16,32 +16,42 @@ for prefix, start, end in [
 
 
 def _to_date_col(lf: pl.LazyFrame, col: str) -> pl.LazyFrame:
-    """Attempt to cast a column to Date type if not already."""
+    """Attempt to cast a column to Date type if not already.
+
+    Handles YYYY-MM format (e.g. "2024-07") by appending "-01" to make a valid date.
+    """
     schema = lf.collect_schema()
     if col not in schema:
         return lf
     dtype = schema[col]
     if dtype == pl.Date or dtype == pl.Datetime:
         return lf
-    # Try parsing common formats
+    # Try parsing common formats, including YYYY-MM (append -01)
     return lf.with_columns(
         pl.coalesce([
             pl.col(col).cast(pl.Utf8).str.strptime(pl.Date, "%Y-%m-%d", strict=False),
             pl.col(col).cast(pl.Utf8).str.strptime(pl.Date, "%Y%m%d", strict=False),
             pl.col(col).cast(pl.Utf8).str.strptime(pl.Date, "%m/%d/%Y", strict=False),
+            # YYYY-MM format: append "-01" and parse
+            (pl.col(col).cast(pl.Utf8) + "-01").str.strptime(pl.Date, "%Y-%m-%d", strict=False),
         ]).alias(col)
     )
 
 
 def _extract_year_month(lf: pl.LazyFrame, col: str) -> pl.LazyFrame:
-    """Add year_month column from a date column."""
+    """Add year_month column from a date or string column.
+
+    After _to_date_col, the column should be Date type. But if it was already
+    a "YYYY-MM" string that got parsed to Date via appending "-01", we use dt.strftime.
+    Falls back to string slicing for non-date types.
+    """
     schema = lf.collect_schema()
     dtype = schema.get(col)
     if dtype == pl.Date or dtype == pl.Datetime:
         return lf.with_columns(
             pl.col(col).dt.strftime("%Y-%m").alias("year_month")
         )
-    # Might be integer YYYYMM or string
+    # Might be integer YYYYMM or string like "2024-07"
     return lf.with_columns(
         pl.col(col).cast(pl.Utf8).str.slice(0, 7).alias("year_month")
     )
@@ -112,6 +122,7 @@ def signal_1_excluded_billing(
             pl.col(date_col).min().alias("first_post_excl_billing"),
             pl.col(date_col).max().alias("last_post_excl_billing"),
         ])
+        .filter(pl.col("post_exclusion_paid") > 0)  # Only flag if actual payments made
         .collect()
     )
 
@@ -218,7 +229,8 @@ def signal_3_rapid_escalation(
     """Signal 3: Rapid Billing Escalation.
 
     Targets newly enumerated providers (within 24 months of first claim)
-    showing month-over-month growth exceeding 200% in any rolling 3-month window.
+    showing month-over-month growth exceeding 500% in any rolling window
+    with at least $25,000 in payments during growth months.
     """
     npi_col = med_cols["npi"]
     date_col = med_cols["date"]
@@ -281,7 +293,7 @@ def signal_3_rapid_escalation(
     for row in first_df.iter_rows(named=True):
         npi = row["_npi"]
         first_map[npi] = row["first_billing_month"]
-        if row["enum_date"] is not None:
+        if row["enum_date"] is not None and row["first_billing_month"] is not None:
             enum_map[npi] = row["enum_date"]
             first_ym = row["first_billing_month"]
             try:
@@ -324,13 +336,16 @@ def signal_3_rapid_escalation(
         .group_by("_npi")
         .agg([
             pl.col("mom_growth").max().alias("peak_growth_rate"),
-            # Sum payments in months where growth > 200%
+            # Sum payments in months where growth > 500%
             pl.col("monthly_paid")
-            .filter(pl.col("mom_growth") > 200)
+            .filter(pl.col("mom_growth") > 500)
             .sum()
             .alias("payments_during_growth"),
         ])
-        .filter(pl.col("peak_growth_rate") > 200)
+        .filter(
+            (pl.col("peak_growth_rate") > 500)
+            & (pl.col("payments_during_growth") > 25_000)
+        )
     )
 
     # Build 12-month progressions
@@ -375,7 +390,7 @@ def signal_4_workforce_impossibility(
     payment_col = med_cols["payment"]
 
     HOURS_PER_MONTH = 22 * 8  # 176 business hours
-    THRESHOLD = 6  # claims per provider-hour
+    THRESHOLD = 20  # claims per provider-hour (1 every 3 minutes sustained)
 
     # Only organizations (Entity Type Code = "2")
     org_npis = (
@@ -602,7 +617,7 @@ def signal_6_geographic_implausibility(
             pl.col(hcpcs_col).first().alias("flagged_code"),
         ])
         .filter(
-            (pl.col("total_claims") > 100)
+            (pl.col("total_claims") > 500)
             & (pl.col("unique_benes").is_not_null())
             & (pl.col("unique_benes") > 0)
         )
@@ -610,7 +625,7 @@ def signal_6_geographic_implausibility(
             (pl.col("unique_benes").cast(pl.Float64) / pl.col("total_claims"))
             .alias("bene_claims_ratio")
         )
-        .filter(pl.col("bene_claims_ratio") < 0.1)
+        .filter(pl.col("bene_claims_ratio") < 0.05)
         .collect()
     )
 

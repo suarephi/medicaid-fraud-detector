@@ -147,11 +147,11 @@ class TestSignal3RapidEscalation:
     """Tests for Signal 3: Rapid Billing Escalation."""
 
     def test_flags_rapid_growth_new_provider(self):
-        """New provider with >200% MoM growth should be flagged."""
+        """New provider with >500% MoM growth and >$25k should be flagged."""
         rows = [
-            {"npi": "5555555555", "service_date": date(2023, 1, 15), "payment": 100.0, "claims": 1},
-            {"npi": "5555555555", "service_date": date(2023, 2, 15), "payment": 500.0, "claims": 5},
-            {"npi": "5555555555", "service_date": date(2023, 3, 15), "payment": 2000.0, "claims": 20},
+            {"npi": "5555555555", "service_date": date(2023, 1, 15), "payment": 1000.0, "claims": 1},
+            {"npi": "5555555555", "service_date": date(2023, 2, 15), "payment": 5000.0, "claims": 5},
+            {"npi": "5555555555", "service_date": date(2023, 3, 15), "payment": 50000.0, "claims": 20},
         ]
         medicaid = make_medicaid_df(rows)
 
@@ -162,7 +162,7 @@ class TestSignal3RapidEscalation:
         flags = signal_3_rapid_escalation(medicaid.lazy(), TEST_MED_COLS, nppes.lazy())
 
         assert len(flags) >= 1
-        assert flags[0]["details"]["peak_growth_rate"] > 200
+        assert flags[0]["details"]["peak_growth_rate"] > 500
 
     def test_ignores_established_provider(self):
         """Provider enumerated >24 months before first claim should not be flagged."""
@@ -185,10 +185,10 @@ class TestSignal4WorkforceImpossibility:
     """Tests for Signal 4: Workforce Impossibility."""
 
     def test_flags_impossible_claim_volume(self):
-        """Organization with >6 claims/hour should be flagged."""
-        # 176 hours/month * 6 = 1056 claims is the threshold
+        """Organization with >20 claims/hour should be flagged."""
+        # 176 hours/month * 20 = 3520 claims is the threshold
         rows = [
-            {"npi": "6666666666", "service_date": date(2023, 6, 1), "payment": 50000.0, "claims": 2000},
+            {"npi": "6666666666", "service_date": date(2023, 6, 1), "payment": 50000.0, "claims": 5000},
         ]
         medicaid = make_medicaid_df(rows)
 
@@ -199,7 +199,7 @@ class TestSignal4WorkforceImpossibility:
         flags = signal_4_workforce_impossibility(medicaid.lazy(), TEST_MED_COLS, nppes.lazy())
 
         assert len(flags) == 1
-        assert flags[0]["details"]["implied_claims_per_hour"] > 6
+        assert flags[0]["details"]["implied_claims_per_hour"] > 20
 
     def test_ignores_individual_providers(self):
         """Individual providers (Type 1) should not be checked."""
@@ -301,15 +301,15 @@ class TestSignal6GeographicImplausibility:
     """Tests for Signal 6: Geographic Implausibility."""
 
     def test_flags_low_beneficiary_ratio(self):
-        """Home health provider with bene/claims ratio < 0.1 and >100 claims."""
+        """Home health provider with bene/claims ratio < 0.05 and >500 claims."""
         rows = [
             {
                 "npi": "9000000001",
                 "hcpcs": "G0151",
                 "service_date": date(2023, 6, 1),
-                "benes": 5,
-                "claims": 200,
-                "payment": 10000.0,
+                "benes": 10,
+                "claims": 1000,
+                "payment": 50000.0,
             },
         ]
         medicaid = make_medicaid_df(rows)
@@ -317,8 +317,8 @@ class TestSignal6GeographicImplausibility:
         flags = signal_6_geographic_implausibility(medicaid.lazy(), TEST_MED_COLS)
 
         assert len(flags) == 1
-        assert flags[0]["details"]["ratio"] < 0.1
-        assert flags[0]["details"]["claims"] > 100
+        assert flags[0]["details"]["ratio"] < 0.05
+        assert flags[0]["details"]["claims"] > 500
 
     def test_normal_ratio_not_flagged(self):
         """Provider with normal beneficiary ratio should not be flagged."""
@@ -328,14 +328,14 @@ class TestSignal6GeographicImplausibility:
                 "hcpcs": "G0151",
                 "service_date": date(2023, 6, 1),
                 "benes": 80,
-                "claims": 200,
-                "payment": 10000.0,
+                "claims": 600,
+                "payment": 30000.0,
             },
         ]
         medicaid = make_medicaid_df(rows)
 
         flags = signal_6_geographic_implausibility(medicaid.lazy(), TEST_MED_COLS)
-        assert len(flags) == 0  # Ratio 0.4 is above 0.1 threshold
+        assert len(flags) == 0  # Ratio 0.133 is above 0.05 threshold
 
     def test_home_health_codes_populated(self):
         """Verify the home health code set contains expected codes."""

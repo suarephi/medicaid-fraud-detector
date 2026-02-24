@@ -9,15 +9,18 @@ import polars as pl
 DATA_DIR = os.environ.get("FRAUD_DATA_DIR", "data")
 
 # Known column name patterns for auto-detection
-_NPI_PATTERNS = ["npi", "rndrng_npi", "rendering_npi", "provider_npi"]
+_NPI_PATTERNS = ["npi", "rndrng_npi", "rendering_npi", "provider_npi",
+                  "billing_provider_npi_num"]
 _HCPCS_PATTERNS = ["hcpcs_cd", "hcpcs", "hcpcs_code", "procedure_code", "proc_cd"]
 _DATE_PATTERNS = ["srvc_dt", "service_date", "srvc_yr_mth", "billing_date",
-                   "year_month", "clm_dt", "period"]
+                   "year_month", "clm_dt", "period", "claim_from_month"]
 _BENE_PATTERNS = ["bene_cnt", "tot_benes", "beneficiary_count", "bene_count",
-                   "unique_bene", "bene_unique_cnt"]
-_CLM_PATTERNS = ["clm_cnt", "tot_clms", "claim_count", "claims", "tot_claims"]
+                   "unique_bene", "bene_unique_cnt", "total_unique_beneficiaries"]
+_CLM_PATTERNS = ["clm_cnt", "tot_clms", "claim_count", "claims", "tot_claims",
+                  "total_claims"]
 _PYMT_PATTERNS = ["pymt_amt", "tot_pymt", "payment_amount", "avg_mdcd_pymt_amt",
-                   "paid_amt", "mdcd_pymt_amt", "total_payment", "mdcd_paid_amt"]
+                   "paid_amt", "mdcd_pymt_amt", "total_payment", "mdcd_paid_amt",
+                   "total_paid"]
 
 
 def _match_column(columns_lower: dict[str, str], patterns: list[str]) -> Optional[str]:
@@ -88,8 +91,9 @@ def load_medicaid(data_dir: Optional[str] = None) -> tuple[pl.LazyFrame, dict[st
         raise FileNotFoundError(f"Medicaid data not found at {path}. Run setup.sh first.")
 
     lf = pl.scan_parquet(path)
-    col_map = detect_medicaid_columns(lf.columns)
-    print(f"Medicaid data: {len(lf.columns)} columns, mapping: {col_map}")
+    col_names = lf.collect_schema().names()
+    col_map = detect_medicaid_columns(col_names)
+    print(f"Medicaid data: {len(col_names)} columns, mapping: {col_map}")
     return lf, col_map
 
 
@@ -166,7 +170,7 @@ def load_nppes(data_dir: Optional[str] = None) -> pl.LazyFrame:
     lf = pl.scan_csv(nppes_file, infer_schema_length=10000, ignore_errors=True)
 
     # Select only columns that exist in the file
-    available = set(lf.columns)
+    available = set(lf.collect_schema().names())
     select_cols = [c for c in needed_cols if c in available]
 
     if not select_cols:
