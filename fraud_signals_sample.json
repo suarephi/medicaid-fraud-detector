@@ -1,0 +1,391 @@
+{
+  "generated_at": "2026-02-24T17:02:03.499321+00:00",
+  "tool_version": "1.0.0",
+  "total_providers_scanned": 617503,
+  "total_providers_flagged": 103379,
+  "signal_counts": {
+    "excluded_provider": 13,
+    "billing_outlier": 12278,
+    "rapid_escalation": 15104,
+    "workforce_impossibility": 73447,
+    "shared_official": 15562,
+    "geographic_implausibility": 9921
+  },
+  "flagged_providers": [
+    {
+      "npi": "1164942496",
+      "provider_name": "GIBSON EBONY",
+      "entity_type": "individual",
+      "taxonomy_code": "3747P1801X",
+      "state": "OH",
+      "enumeration_date": "06/27/2017",
+      "total_paid_all_time": 0.0,
+      "total_claims_all_time": 0,
+      "total_unique_beneficiaries_all_time": 0,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2022-11-20",
+            "exclusion_type": "1128a1",
+            "post_exclusion_paid": 111473.02,
+            "post_exclusion_claims": 504,
+            "first_post_excl_billing": "2022-12-01",
+            "last_post_excl_billing": "2023-01-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 111473.02,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1346352531",
+      "provider_name": "EHRLICH MELVIN",
+      "entity_type": "individual",
+      "taxonomy_code": "1223P0221X",
+      "state": "MA",
+      "enumeration_date": "08/31/2006",
+      "total_paid_all_time": 90572.82,
+      "total_claims_all_time": 2361,
+      "total_unique_beneficiaries_all_time": 1102,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2016-08-18",
+            "exclusion_type": "1128b4",
+            "post_exclusion_paid": 181145.64,
+            "post_exclusion_claims": 4722,
+            "first_post_excl_billing": "2018-09-01",
+            "last_post_excl_billing": "2018-10-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 181145.64,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1205023512",
+      "provider_name": "BADII ROOZBEH",
+      "entity_type": "individual",
+      "taxonomy_code": "208M00000X",
+      "state": "CA",
+      "enumeration_date": "10/01/2007",
+      "total_paid_all_time": 0.0,
+      "total_claims_all_time": 0,
+      "total_unique_beneficiaries_all_time": 0,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2018-09-20",
+            "exclusion_type": "1128b5",
+            "post_exclusion_paid": 44838.64,
+            "post_exclusion_claims": 3199,
+            "first_post_excl_billing": "2020-10-01",
+            "last_post_excl_billing": "2021-12-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 44838.64,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1871571406",
+      "provider_name": "ASWAD MOHAMED",
+      "entity_type": "individual",
+      "taxonomy_code": "207R00000X",
+      "state": "NM",
+      "enumeration_date": "01/04/2006",
+      "total_paid_all_time": 674214.18,
+      "total_claims_all_time": 10409,
+      "total_unique_beneficiaries_all_time": 7176,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2016-01-20",
+            "exclusion_type": "1128a1",
+            "post_exclusion_paid": 1575535.0,
+            "post_exclusion_claims": 31689,
+            "first_post_excl_billing": "2018-01-01",
+            "last_post_excl_billing": "2022-07-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 1575535.0,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1093904914",
+      "provider_name": "Unknown",
+      "entity_type": "organization",
+      "taxonomy_code": "",
+      "state": "",
+      "enumeration_date": "",
+      "total_paid_all_time": 678430.03,
+      "total_claims_all_time": 26861,
+      "total_unique_beneficiaries_all_time": 23153,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2021-05-25",
+            "exclusion_type": "1128b7",
+            "post_exclusion_paid": 271596.05,
+            "post_exclusion_claims": 10988,
+            "first_post_excl_billing": "2021-06-01",
+            "last_post_excl_billing": "2024-12-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 271596.05,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1851353866",
+      "provider_name": "WAHIB SAMIR",
+      "entity_type": "individual",
+      "taxonomy_code": "207V00000X",
+      "state": "IN",
+      "enumeration_date": "04/05/2006",
+      "total_paid_all_time": 0.0,
+      "total_claims_all_time": 0,
+      "total_unique_beneficiaries_all_time": 0,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2024-01-18",
+            "exclusion_type": "1128a1",
+            "post_exclusion_paid": 52524.64000000001,
+            "post_exclusion_claims": 1359,
+            "first_post_excl_billing": "2024-06-01",
+            "last_post_excl_billing": "2024-11-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 52524.64,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1821269275",
+      "provider_name": "TWIN CITIES CARE SERVICES",
+      "entity_type": "organization",
+      "taxonomy_code": "251E00000X",
+      "state": "MN",
+      "enumeration_date": "03/13/2008",
+      "total_paid_all_time": 116030.95,
+      "total_claims_all_time": 763,
+      "total_unique_beneficiaries_all_time": 35,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2017-06-20",
+            "exclusion_type": "1128a1",
+            "post_exclusion_paid": 116030.95,
+            "post_exclusion_claims": 763,
+            "first_post_excl_billing": "2024-10-01",
+            "last_post_excl_billing": "2024-11-01"
+          }
+        },
+        {
+          "signal_type": "geographic_implausibility",
+          "severity": "high",
+          "evidence": {
+            "state": "MN",
+            "flagged_codes": [
+              "T1019"
+            ],
+            "month": "2024-11",
+            "claims": 418,
+            "unique_beneficiaries": 17,
+            "ratio": 0.0407
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 116030.95,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1134139884",
+      "provider_name": "BRUCE VICTOR",
+      "entity_type": "individual",
+      "taxonomy_code": "208000000X",
+      "state": "NV",
+      "enumeration_date": "08/08/2006",
+      "total_paid_all_time": 0.0,
+      "total_claims_all_time": 0,
+      "total_unique_beneficiaries_all_time": 0,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2015-12-20",
+            "exclusion_type": "1128a4",
+            "post_exclusion_paid": 2007.35,
+            "post_exclusion_claims": 186,
+            "first_post_excl_billing": "2021-11-01",
+            "last_post_excl_billing": "2021-12-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 2007.35,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1124264148",
+      "provider_name": "JOHNSON ROMAN",
+      "entity_type": "individual",
+      "taxonomy_code": "208D00000X",
+      "state": "NY",
+      "enumeration_date": "12/22/2008",
+      "total_paid_all_time": 0.0,
+      "total_claims_all_time": 0,
+      "total_unique_beneficiaries_all_time": 0,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2017-01-19",
+            "exclusion_type": "1128a1",
+            "post_exclusion_paid": 194.0,
+            "post_exclusion_claims": 62,
+            "first_post_excl_billing": "2019-10-01",
+            "last_post_excl_billing": "2019-10-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 194.0,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    },
+    {
+      "npi": "1285673012",
+      "provider_name": "MIRANDA EDUARDO",
+      "entity_type": "individual",
+      "taxonomy_code": "174400000X",
+      "state": "TX",
+      "enumeration_date": "06/06/2006",
+      "total_paid_all_time": 0.0,
+      "total_claims_all_time": 0,
+      "total_unique_beneficiaries_all_time": 0,
+      "signals": [
+        {
+          "signal_type": "excluded_provider",
+          "severity": "critical",
+          "evidence": {
+            "exclusion_date": "2015-06-18",
+            "exclusion_type": "1128a1",
+            "post_exclusion_paid": 234995.83000000002,
+            "post_exclusion_claims": 13208,
+            "first_post_excl_billing": "2018-01-01",
+            "last_post_excl_billing": "2024-11-01"
+          }
+        }
+      ],
+      "estimated_overpayment_usd": 234995.83,
+      "fca_relevance": {
+        "claim_type": "Presenting false or fraudulent claims in violation of 31 U.S.C. \u00a73729(a)(1)(A) -- provider excluded from Federal healthcare programs under 42 U.S.C. \u00a71320a-7b is prohibited from billing Medicaid and all claims submitted post-exclusion constitute per se false claims under the FCA",
+        "statute_reference": "31 U.S.C. \u00a73729(a)(1)(A); 42 U.S.C. \u00a71320a-7b(f)",
+        "suggested_next_steps": [
+          "Verify current exclusion status via OIG LEIE database (https://exclusions.oig.hhs.gov/) and SAM.gov; confirm no reinstatement has been granted",
+          "Calculate total Federal healthcare program payments made post-exclusion date for treble damages assessment under 31 U.S.C. \u00a73729(a)(1)(G) (current penalty: $13,946-$27,894 per claim plus treble damages)",
+          "Refer to OIG Hotline (1-800-HHS-TIPS / oig.hhs.gov/fraud/report-fraud/) and state Medicaid Fraud Control Unit (MFCU) for coordinated investigation",
+          "Review billing entity's compliance program for evidence of knowing participation or deliberate ignorance per 31 U.S.C. \u00a73729(b)(1) scienter standard"
+        ]
+      }
+    }
+  ],
+  "_note": "Sample output (first 10 of 103,379 flagged providers). Full output generated by: python -m src.main"
+}
