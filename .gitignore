@@ -7,3 +7,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+fraud_signals.json
+pipeline_output.log
+download_parquet.py

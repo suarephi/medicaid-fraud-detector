@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "medicaid-fraud-detector"
+version = "1.0.0"
+description = "Medicaid Provider Fraud Signal Detection Engine for False Claims Act investigations"
+requires-python = ">=3.11"
+dependencies = [
+    "polars>=0.20.0",
+    "pyarrow>=14.0.0",
+    "requests>=2.31.0",
+    "tqdm>=4.66.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

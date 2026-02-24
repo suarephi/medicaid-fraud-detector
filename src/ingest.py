@@ -1,4 +1,11 @@
-"""Data ingestion module - loads and prepares the three required datasets."""
+"""Data ingestion module - loads and prepares the three required datasets.
+
+Handles loading of Medicaid provider spending data (parquet), OIG LEIE exclusion
+list (CSV), and NPPES NPI registry (CSV) with automatic column detection and
+normalization.
+"""
+from __future__ import annotations
+
 import glob
 import os
 from typing import Optional
@@ -24,7 +31,15 @@ _PYMT_PATTERNS = ["pymt_amt", "tot_pymt", "payment_amount", "avg_mdcd_pymt_amt",
 
 
 def _match_column(columns_lower: dict[str, str], patterns: list[str]) -> Optional[str]:
-    """Find the first matching column name from a list of patterns."""
+    """Find the first matching column name from a list of known patterns.
+
+    Args:
+        columns_lower: Mapping of lowercase column names to original column names.
+        patterns: List of lowercase patterns to match against.
+
+    Returns:
+        The original column name if a match is found, or None otherwise.
+    """
     for p in patterns:
         if p in columns_lower:
             return columns_lower[p]
@@ -34,11 +49,19 @@ def _match_column(columns_lower: dict[str, str], patterns: list[str]) -> Optiona
 def detect_medicaid_columns(columns: list[str]) -> dict[str, str]:
     """Auto-detect Medicaid parquet column names and map to standard aliases.
 
-    Returns a dict mapping standard names (npi, hcpcs, date, benes, claims, payment)
-    to actual column names in the parquet file.
+    Matches column names against known patterns for each field type. Falls back
+    to positional assignment for 7-column files when pattern matching is
+    incomplete.
+
+    Args:
+        columns: List of column names from the parquet file.
+
+    Returns:
+        A dict mapping standard aliases (npi, hcpcs, date, benes, claims,
+        payment) to actual column names in the parquet file.
     """
     cols_lower = {c.lower(): c for c in columns}
-    mapping = {}
+    mapping: dict[str, str] = {}
 
     for alias, patterns in [
         ("npi", _NPI_PATTERNS),
@@ -75,15 +98,30 @@ def detect_medicaid_columns(columns: list[str]) -> dict[str, str]:
 
 
 def normalize_npi(expr: pl.Expr) -> pl.Expr:
-    """Normalize NPI column to 10-digit zero-padded string."""
+    """Normalize an NPI column to a 10-digit zero-padded string.
+
+    Args:
+        expr: A Polars expression referencing an NPI column.
+
+    Returns:
+        A Polars expression that casts to string, strips whitespace, and
+        zero-pads to 10 digits.
+    """
     return expr.cast(pl.Utf8).str.strip_chars().str.zfill(10)
 
 
 def load_medicaid(data_dir: Optional[str] = None) -> tuple[pl.LazyFrame, dict[str, str]]:
     """Load Medicaid provider spending data as a lazy frame.
 
+    Args:
+        data_dir: Directory containing the parquet file. Defaults to the
+            FRAUD_DATA_DIR environment variable or "data".
+
     Returns:
-        Tuple of (LazyFrame, column_mapping dict)
+        A tuple of (LazyFrame of Medicaid data, column mapping dict).
+
+    Raises:
+        FileNotFoundError: If the parquet file does not exist.
     """
     ddir = data_dir or DATA_DIR
     path = os.path.join(ddir, "medicaid-provider-spending.parquet")
@@ -98,9 +136,21 @@ def load_medicaid(data_dir: Optional[str] = None) -> tuple[pl.LazyFrame, dict[st
 
 
 def load_leie(data_dir: Optional[str] = None) -> pl.DataFrame:
-    """Load OIG LEIE exclusion list.
+    """Load the OIG LEIE (List of Excluded Individuals/Entities).
 
-    Key columns: NPI, EXCLDATE (YYYYMMDD), REINDATE, EXCLTYPE, GENERAL
+    Parses exclusion and reinstatement dates from YYYYMMDD format and
+    normalizes NPI values to 10-digit zero-padded strings.
+
+    Args:
+        data_dir: Directory containing UPDATED.csv. Defaults to the
+            FRAUD_DATA_DIR environment variable or "data".
+
+    Returns:
+        A DataFrame with parsed date columns (excl_date_parsed,
+        rein_date_parsed) and normalized NPI (npi_str).
+
+    Raises:
+        FileNotFoundError: If UPDATED.csv does not exist.
     """
     ddir = data_dir or DATA_DIR
     path = os.path.join(ddir, "UPDATED.csv")
@@ -132,10 +182,26 @@ def load_leie(data_dir: Optional[str] = None) -> pl.DataFrame:
 
 
 def load_nppes(data_dir: Optional[str] = None) -> pl.LazyFrame:
-    """Load NPPES NPI registry with only the 11 required columns."""
+    """Load the NPPES NPI registry with only the 11 required columns.
+
+    Searches for the NPPES CSV file using multiple filename patterns and
+    selects only the columns needed for fraud signal analysis.
+
+    Args:
+        data_dir: Directory containing the NPPES CSV file. Defaults to the
+            FRAUD_DATA_DIR environment variable or "data".
+
+    Returns:
+        A LazyFrame with the 11 competition-required NPPES columns (or as
+        many as are available in the file).
+
+    Raises:
+        FileNotFoundError: If no NPPES CSV file is found.
+    """
     ddir = data_dir or DATA_DIR
 
     # Find the extracted CSV file
+    files: list[str] = []
     for pattern in [
         os.path.join(ddir, "npidata_pfile_*.csv"),
         os.path.join(ddir, "NPPES*.csv"),

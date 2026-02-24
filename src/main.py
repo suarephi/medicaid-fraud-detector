@@ -1,6 +1,12 @@
-"""Main orchestration module - runs the full fraud detection pipeline."""
+"""Main orchestration module - runs the full fraud detection pipeline.
+
+Loads three datasets (Medicaid spending, OIG LEIE, NPPES), runs six fraud
+signal detection algorithms, enriches results with provider metadata, and
+writes the final JSON report.
+"""
+from __future__ import annotations
+
 import argparse
-import sys
 import time
 import traceback
 
@@ -18,7 +24,12 @@ from src.signals import (
 from src.output import build_provider_entry, build_report, write_report
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for the fraud detection pipeline.
+
+    Returns:
+        Parsed arguments with data_dir, output, and no_gpu attributes.
+    """
     parser = argparse.ArgumentParser(
         description="Medicaid Provider Fraud Signal Detection Engine"
     )
@@ -43,13 +54,28 @@ def enrich_flags_with_nppes(
     medicaid_lf: pl.LazyFrame,
     med_cols: dict[str, str],
 ) -> list[dict]:
-    """Enrich flag entries with provider metadata from NPPES and lifetime billing."""
+    """Enrich flag entries with provider metadata from NPPES and lifetime billing.
+
+    Looks up provider name, entity type, taxonomy, state, and enumeration date
+    from NPPES, and computes lifetime billing totals from Medicaid data. Groups
+    flags by NPI and builds complete provider entries.
+
+    Args:
+        flags: List of raw signal flag dicts (with npi, signal_id, details).
+        nppes_lf: Lazy frame of NPPES registry data.
+        medicaid_lf: Lazy frame of Medicaid provider spending data.
+        med_cols: Column name mapping from detect_medicaid_columns().
+
+    Returns:
+        List of enriched provider entry dicts ready for the final report.
+    """
     if not flags:
         return []
 
     npi_col = med_cols["npi"]
     payment_col = med_cols["payment"]
     claims_col = med_cols["claims"]
+    bene_col = med_cols["benes"]
 
     # Collect unique NPIs from all flags
     flag_npis = list({f["npi"] for f in flags})
@@ -63,7 +89,7 @@ def enrich_flags_with_nppes(
     )
 
     # Build NPI -> metadata lookup
-    meta_map = {}
+    meta_map: dict[str, dict[str, str]] = {}
     for row in nppes_meta.iter_rows(named=True):
         npi = row["_npi"]
         entity_type = str(row.get("Entity Type Code", ""))
@@ -73,13 +99,13 @@ def enrich_flags_with_nppes(
             name = str(row.get("Provider Organization Name (Legal Business Name)", ""))
         meta_map[npi] = {
             "provider_name": name or "Unknown",
-            "entity_type": "Individual" if entity_type == "1" else "Organization",
+            "entity_type": "individual" if entity_type == "1" else "organization",
             "taxonomy_code": str(row.get("Healthcare Provider Taxonomy Code_1", "")),
             "state": str(row.get("Provider Business Practice Location Address State Name", "")),
             "enumeration_date": str(row.get("Provider Enumeration Date", "")),
         }
 
-    # Get lifetime billing per NPI
+    # Get lifetime billing per NPI (including beneficiaries)
     lifetime = (
         medicaid_lf
         .with_columns(normalize_npi(pl.col(npi_col)).alias("_npi"))
@@ -88,15 +114,17 @@ def enrich_flags_with_nppes(
         .agg([
             pl.col(payment_col).sum().alias("lifetime_paid"),
             pl.col(claims_col).sum().alias("lifetime_claims"),
+            pl.col(bene_col).sum().alias("lifetime_benes"),
         ])
         .collect()
     )
 
-    billing_map = {}
+    billing_map: dict[str, dict[str, float | int]] = {}
     for row in lifetime.iter_rows(named=True):
         billing_map[row["_npi"]] = {
             "lifetime_paid": float(row["lifetime_paid"]),
             "lifetime_claims": int(row["lifetime_claims"]),
+            "lifetime_benes": int(row["lifetime_benes"]),
         }
 
     # Merge flags by NPI to build provider entries
@@ -104,16 +132,20 @@ def enrich_flags_with_nppes(
     for f in flags:
         npi_flags.setdefault(f["npi"], []).append(f)
 
-    enriched = []
+    enriched: list[dict] = []
     for npi, npi_flag_list in npi_flags.items():
         meta = meta_map.get(npi, {
             "provider_name": "Unknown",
-            "entity_type": "Unknown",
+            "entity_type": "unknown",
             "taxonomy_code": "",
             "state": "",
             "enumeration_date": "",
         })
-        billing = billing_map.get(npi, {"lifetime_paid": 0.0, "lifetime_claims": 0})
+        billing = billing_map.get(npi, {
+            "lifetime_paid": 0.0,
+            "lifetime_claims": 0,
+            "lifetime_benes": 0,
+        })
 
         # Enrich Signal 6 state field if missing
         for f in npi_flag_list:
@@ -129,6 +161,7 @@ def enrich_flags_with_nppes(
             enumeration_date=meta["enumeration_date"],
             lifetime_paid=billing["lifetime_paid"],
             lifetime_claims=billing["lifetime_claims"],
+            lifetime_benes=billing["lifetime_benes"],
             signals=npi_flag_list,
         )
         enriched.append(entry)
@@ -136,7 +169,13 @@ def enrich_flags_with_nppes(
     return enriched
 
 
-def main():
+def main() -> None:
+    """Run the full fraud detection pipeline.
+
+    Orchestrates data loading, signal detection, result enrichment, and
+    report generation. Each signal runs independently with error isolation
+    so that a failure in one signal does not prevent others from completing.
+    """
     args = parse_args()
     data_dir = args.data_dir
     output_path = args.output
@@ -168,8 +207,8 @@ def main():
 
     # Run all signals
     print("\n[3/4] Running fraud signal detection...")
-    all_flags = []
-    signal_tallies = {}
+    all_flags: list[dict] = []
+    signal_tallies: dict[str, int] = {}
 
     signal_runners = [
         ("signal_1", lambda: signal_1_excluded_billing(medicaid_lf, med_cols, leie_df)),
